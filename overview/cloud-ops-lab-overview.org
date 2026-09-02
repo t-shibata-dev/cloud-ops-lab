@@ -1,0 +1,62 @@
+:PROPERTIES:
+:GPTEL_MODEL: claude-sonnet-4-5-20250929
+:GPTEL_BACKEND: Claude
+:GPTEL_SYSTEM: You are a large language model living in Emacs and a helpful assistant. Respond concisely.
+:GPTEL_TOOLS:
+:END:
+#+TITLE: プログラム制作演習
+#+AUTHOR: T.Shibata
+#+DESCRIPTION: AWSクラウドインフラ構築学習プロジェクトの演習記録
+#+KEYWORDS: AWS, Terraform, Docker, Kubernetes, クラウドインフラ
+#+REVEAL_ROOT: https://cdn.jsdelivr.net/npm/reveal.js
+#+REVEAL_THEME: moon
+#+REVEAL_TRANSITION: slide
+#+REVEAL_HLEVEL: 1
+#+REVEAL_PLUGINS: (highlight notes)
+#+REVEAL_SLIDE_NUMBER: c/t
+#+REVEAL_INIT_OPTIONS: width:1280, height:720
+
+* プログラムについて
++ プログラムの名称：cloud-ops-lab
++ ファイル名：cloud-ops-lab
++ 必要なパッケージ：
++ 動作内容：AWSを使用して、クラウドインフラの構築・管理を行なう。
+
+* 作成した意図
++ AWSやクラウドの概念を理解し、クラウドインフラを扱えるような能力を目指す
++ Phase 1（EC2+S3+WordPress）が順調に上手く進み1週間で終わった場合、
+  Phase 2（RDS移行）を2週目にやる予定。
++ Amazon Lightsailは拡張性がないためEC2を選択する
++ サインアップ$100＋αの無料クレジット枠の範囲でできることを行い、AWSの理解を深める
+
+** 学習したいこと
++ AWS
+  - EC2(Elastic Compute Cloud)
+  - S3(Amazon Simple Storage Service)
+  - RDS(Relational Database Service)
+  - Lambda(Pythonプログラム)
++ Terraform
++ Docker
++ Kubernetes
+
+** 学習手順
+1) 手動構築で基礎固め（AWS Console）
+2) データ層の強化（RDS）
+3) コード化・自動化（GitHub + Terraform）
+4) サーバーレス自動化（Lambda）
+5) コンテナ化（Docker → Kubernetes）
+
+** フェーズ別の目安（1日1〜2時間）
+|---+-----------------------------+----------|
+| 1 | EC2 + S3 + WordPress手動構築 | 2〜4週間 |
+| 2 | RDS導入・DB移行              | 1〜2週間 |
+| 3 | GitHub + Terraform          | 3〜6週間 |
+| 4 | Lambda（Python・死活監視）    | 2〜4週間 |
+| 5 | Docker                      | 2〜4週間 |
+| 6 | Kubernetes                  | 4〜8週間 |
+|---+-----------------------------+----------|
+
+* 工夫した点
+* 苦労した点
+* その他（実現できなかったこと、etc.）
+

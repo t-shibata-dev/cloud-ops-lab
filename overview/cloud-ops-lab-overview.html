@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Generated on 2026-08-30 Sun 09:05 -->
+<meta charset="utf-8"/>
+<title>プログラム制作演習</title>
+<meta name="author" content="T.Shibata"/>
+<meta name="description" content="AWSクラウドインフラ構築学習プロジェクトの演習記録"/>
+<meta name="keywords" content="AWS, Terraform, Docker, Kubernetes, クラウドインフラ"/>
+<style type="text/css">
+.underline { text-decoration: underline; }
+</style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js/dist/reveal.css"/>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js/dist/theme/moon.css" id="theme"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js/plugin/highlight/zenburn.css"/>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+<section id="sec-title-slide">
+<h1 class="title">プログラム制作演習</h1><h2 class="author">T.Shibata</h2><p class="date">Created: 2026-08-30 Sun 09:05</p>
+</section>
+<section id="table-of-contents-section">
+<div id="table-of-contents" role="doc-toc">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents" role="doc-toc">
+<ul>
+<li><a href="#/slide-1">1. プログラムについて</a></li>
+<li><a href="#/slide-2">2. 作成した意図</a>
+<ul>
+<li><a href="#/slide-2-1">2.1. 学習したいこと</a></li>
+<li><a href="#/slide-2-2">2.2. 学習手順</a></li>
+<li><a href="#/slide-2-3">2.3. フェーズ別の目安（1日1〜2時間）</a></li>
+</ul>
+</li>
+<li><a href="#/slide-3">3. 工夫した点</a></li>
+<li><a href="#/slide-4">4. 苦労した点</a></li>
+<li><a href="#/slide-5">5. その他（実現できなかったこと、etc.）</a></li>
+</ul>
+</div>
+</div>
+</section>
+<section>
+<section id="slide-1">
+<h2 id="1"><span class="section-number-2">1.</span> プログラムについて</h2>
+<ul>
+<li>プログラムの名称：cloud-ops-lab</li>
+<li>ファイル名：cloud-ops-lab</li>
+<li>必要なパッケージ：</li>
+<li>動作内容：AWSを使用して、クラウドインフラの構築・管理を行なう。</li>
+
+</ul>
+</section>
+</section>
+<section>
+<section id="slide-2">
+<h2 id="2"><span class="section-number-2">2.</span> 作成した意図</h2>
+<ul>
+<li>AWSやクラウドの概念を理解し、クラウドインフラを扱えるような能力を目指す</li>
+<li>Phase 1（EC2+S3+WordPress）が順調に上手く進み1週間で終わった場合、
+Phase 2（RDS移行）を2週目にやる予定。</li>
+<li>Amazon Lightsailは拡張性がないためEC2を選択する</li>
+<li>サインアップ$100＋αの無料クレジット枠の範囲でできることを行い、AWSの理解を深める</li>
+
+</ul>
+</section>
+<section id="slide-2-1">
+<h3 id="2-1"><span class="section-number-3">2.1.</span> 学習したいこと</h3>
+<ul>
+<li>AWS
+<ul>
+<li>EC2(Elastic Compute Cloud)</li>
+<li>S3(Amazon Simple Storage Service)</li>
+<li>RDS(Relational Database Service)</li>
+<li>Lambda(Pythonプログラム)</li>
+
+</ul></li>
+<li>Terraform</li>
+<li>Docker</li>
+<li>Kubernetes</li>
+
+</ul>
+</section>
+<section id="slide-2-2">
+<h3 id="2-2"><span class="section-number-3">2.2.</span> 学習手順</h3>
+<ol>
+<li>手動構築で基礎固め（AWS Console）</li>
+<li>データ層の強化（RDS）</li>
+<li>コード化・自動化（GitHub + Terraform）</li>
+<li>サーバーレス自動化（Lambda）</li>
+<li>コンテナ化（Docker → Kubernetes）</li>
+
+</ol>
+</section>
+<section id="slide-2-3">
+<h3 id="2-3"><span class="section-number-3">2.3.</span> フェーズ別の目安（1日1〜2時間）</h3>
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-right" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<tbody>
+<tr>
+<td class="org-right">1</td>
+<td class="org-left">EC2 + S3 + WordPress手動構築</td>
+<td class="org-left">2〜4週間</td>
+</tr>
+
+<tr>
+<td class="org-right">2</td>
+<td class="org-left">RDS導入・DB移行</td>
+<td class="org-left">1〜2週間</td>
+</tr>
+
+<tr>
+<td class="org-right">3</td>
+<td class="org-left">GitHub + Terraform</td>
+<td class="org-left">3〜6週間</td>
+</tr>
+
+<tr>
+<td class="org-right">4</td>
+<td class="org-left">Lambda（Python・死活監視）</td>
+<td class="org-left">2〜4週間</td>
+</tr>
+
+<tr>
+<td class="org-right">5</td>
+<td class="org-left">Docker</td>
+<td class="org-left">2〜4週間</td>
+</tr>
+
+<tr>
+<td class="org-right">6</td>
+<td class="org-left">Kubernetes</td>
+<td class="org-left">4〜8週間</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section>
+<section id="slide-3">
+<h2 id="3"><span class="section-number-2">3.</span> 工夫した点</h2>
+</section>
+</section>
+<section>
+<section id="slide-4">
+<h2 id="4"><span class="section-number-2">4.</span> 苦労した点</h2>
+</section>
+</section>
+<section>
+<section id="slide-5">
+<h2 id="5"><span class="section-number-2">5.</span> その他（実現できなかったこと、etc.）</h2>
+</section>
+</section>
+</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js/dist/reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js/plugin/highlight/highlight.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js/plugin/notes/notes.js"></script>
+<script>
+// Full list of configuration options available here:
+// https://github.com/hakimel/reveal.js#configuration
+Reveal.initialize({
+
+controls: true,
+progress: true,
+history: false,
+center: true,
+slideNumber: 'c',
+rollingLinks: false,
+keyboard: true,
+mouseWheel: false,
+fragmentInURL: false,
+hashOneBasedIndex: false,
+pdfSeparateFragments: true,
+overview: true,
+
+transition: 'convex',
+transitionSpeed: 'default',
+
+// Plugins with reveal.js 4.x and later
+plugins: [ RevealHighlight, RevealNotes ],
+
+// Optional libraries used to extend reveal.js
+dependencies: [
+]
+
+});
+</script>
+</body>
+</html>
