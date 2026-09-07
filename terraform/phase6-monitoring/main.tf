@@ -5,7 +5,14 @@ terraform {
       version = "~> 5.0"
     }
   }
+
+  backend "s3" {
+    bucket = "cloud-ops-lab-tfstate"
+    key    = "phase6-monitoring/terraform.tfstate"
+    region = "ap-northeast-1"
+  }
 }
+
 
 provider "aws" {
   region = "ap-northeast-1"
