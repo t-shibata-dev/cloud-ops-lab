@@ -118,3 +118,4 @@ resource "aws_lambda_permission" "allow_eventbridge" {
 # retrigger3
 # retrigger5
 # retrigger6
+# iam-key-auth
