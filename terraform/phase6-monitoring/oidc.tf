@@ -4,7 +4,8 @@ resource "aws_iam_openid_connect_provider" "github" {
 
   client_id_list = ["sts.amazonaws.com"]
 
-  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
+  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1",
+                     "4f716e2ecad1725e8aa8e289488c6a8b60069174"]
 }
 
 # GitHub Actions が引き受ける IAM Role
