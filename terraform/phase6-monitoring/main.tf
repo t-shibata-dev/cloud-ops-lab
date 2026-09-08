@@ -117,3 +117,4 @@ resource "aws_lambda_permission" "allow_eventbridge" {
 # retrigger2
 # retrigger3
 # retrigger5
+# retrigger6
