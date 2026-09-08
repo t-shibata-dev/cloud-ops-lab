@@ -114,3 +114,4 @@ resource "aws_lambda_permission" "allow_eventbridge" {
 }
 # trigger CI
 # retrigger
+# retrigger2
