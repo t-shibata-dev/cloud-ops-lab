@@ -71,9 +71,10 @@ WantedBy=multi-user.target
 EOF
 
 # ── Grafana ───────────────────────────────────────────
-apt-get install -y apt-transport-https software-properties-common
-wget -q -O /usr/share/keyrings/grafana.key https://apt.grafana.com/gpg.key
-echo "deb [signed-by=/usr/share/keyrings/grafana.key] https://apt.grafana.com stable main" \
+apt-get install -y apt-transport-https software-properties-common gnupg
+mkdir -p /etc/apt/keyrings
+wget -q -O - https://apt.grafana.com/gpg.key | gpg --dearmor > /etc/apt/keyrings/grafana.gpg
+echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" \
   > /etc/apt/sources.list.d/grafana.list
 apt-get update -y
 apt-get install -y grafana

@@ -11,7 +11,7 @@ variable "ami_id" {
 }
 
 variable "instance_type" {
-  default = "t3.micro"
+  default = "t3.small"
 }
 
 variable "account_id" {
