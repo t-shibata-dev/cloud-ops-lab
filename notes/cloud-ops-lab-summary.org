@@ -1,0 +1,366 @@
+#+TITLE: cloud-ops-lab — SRE 学習ポートフォリオ
+#+AUTHOR: T. Shibata
+#+DATE: 2026-09-09
+#+OPTIONS: toc:2 num:t
+#+STARTUP: overview
+
+* プロジェクト概要
+
+AWS 上に WordPress サイトを題材として、インフラを *手動構築 → コード化 → 自動化 →
+コンテナ化 → 可観測性* まで段階的に積み上げた学習用プロジェクト。
+
+マネージドサービスに頼り切る前に「ネットワーク・サーバー・権限・運用で何が起きて
+いるか」をコンソール操作で理解し、その後 Terraform でコード化していく方針を取った。
+最終的に SRE の中核スキルである可観測性（メトリクス・ログ・トレーシング）の三本柱
+までを実装している。
+
+- *位置づけ*: 学習用ラボ環境（本番運用サイトではない）
+- *リージョン*: ap-northeast-1（東京）
+- *AWS アカウント*: 205382053604
+- *リポジトリ*: GitHub =t-shibata-dev/cloud-ops-lab=（公開ポートフォリオ）
+
+** 学習対象
+
+- AWS: EC2 / S3 / RDS / Lambda / SNS / EventBridge / CloudWatch / X-Ray / IAM / SSM
+- IaC: Terraform（state は S3 バックエンド）
+- コンテナ: Docker / Docker Compose / Kubernetes
+- CI/CD: GitHub Actions
+- 可観測性: Prometheus / Grafana / CloudWatch Logs / AWS X-Ray
+
+** 一貫して意識した設計方針
+
+- *SSH(22) を開けず SSM Session Manager で運用* — 攻撃面を減らし、接続元 IP が
+  変わっても運用できる
+- *アクセスキーをサーバーに置かず IAM ロールで権限委譲* — 最小権限を意識
+- *手動で理解してからコード化* — Terraform で抽象化する前に実機で挙動を掴む
+- *学習後は課金源を停止・削除* — RDS 等は検証後にクリーンアップ
+
+* 技術スタック
+
+| レイヤー     | 使用技術                                                    |
+|-------------+------------------------------------------------------------|
+| ネットワーク | VPC / サブネット / IGW / ルートテーブル / セキュリティグループ   |
+| コンピュート | EC2（t3.micro / t3.small）, Ubuntu Server 26.04 LTS        |
+| Web / App   | Apache 2.4, PHP 8.5, WordPress                             |
+| データベース | MySQL 8.4（EC2同居 → RDS db.t4g.micro へ移行検証）           |
+| ストレージ   | S3（画像オフロード / Terraform state）                       |
+| サーバーレス | Lambda（Python）, SNS, EventBridge                         |
+| IaC         | Terraform（S3 バックエンド）                                 |
+| コンテナ     | Docker, Docker Compose, Kubernetes（Colima / k3s）         |
+| CI/CD       | GitHub Actions                                             |
+| 可観測性     | Prometheus, Grafana, Node Exporter, CloudWatch Logs, X-Ray |
+| 権限・運用   | IAM（ロール／最小権限）, Systems Manager（Session Manager）   |
+
+* ロードマップと進捗
+
+| Phase | テーマ                        | 状態      |
+|-------+-------------------------------+-----------|
+|     1 | EC2 + S3 で WordPress 手動構築 | 完了      |
+|     2 | RDS 分離（三層アーキテクチャ）   | 完了・撤去 |
+|     3 | GitHub + Terraform 導入       | 完了      |
+|     4 | Lambda 死活監視（Python）      | 完了      |
+|     5 | Docker / コンテナ              | 完了      |
+|     6 | 死活監視の Terraform 化        | 完了      |
+|     7 | Kubernetes 基礎               | 完了      |
+|     8 | CI/CD（GitHub Actions）       | 完了      |
+|     9 | 可観測性: Metrics              | 完了      |
+|    10 | 可観測性: Logs                 | 完了      |
+|    11 | 可観測性: Traces               | 完了      |
+
+* Phase 1 — EC2 + S3 で WordPress 手動構築
+
+*目的*: AWS の「感覚」を掴む。VPC から手作業で組み、マネージドの裏で何が起きて
+いるかを理解する。
+
+** やったこと
+
+- VPC(10.0.0.0/16) → パブリックサブネット(10.0.1.0/24) → IGW → ルートテーブル
+  (=0.0.0.0/0 → IGW=) を手組み。「IGW + ルート + サブネット関連付けの3点が揃って
+  初めてパブリックサブネット」を実機で理解
+- EC2(Ubuntu 26.04 / t3.micro)に Apache + PHP + MySQL を導入し WordPress を公開
+- 画像メディアを S3 にオフロード（WP Offload Media Lite）
+- 管理アクセスは SSM Session Manager。SSH(22)は開けない
+
+** 主要リソース
+
+| 種別       | 値                                                  |
+|------------+-----------------------------------------------------|
+| VPC        | =cloud-ops-lab-vpc= / 10.0.0.0/16                   |
+| サブネット  | =cloud-ops-lab-public-1a= / 10.0.1.0/24 / 1a        |
+| EC2        | =i-0c5818f0ef2518d19= / t3.micro / 内部IP 10.0.1.25 |
+| IAM ロール | =cloud-ops-lab-ec2-ssm-role=                        |
+
+** つまずきと学び
+
+- *SSH タイムアウトの真因は接続元 IP の揺れ（CGNAT）* — SG は正しいのに繋がらず、
+  =curl= で見える IP と実際の SSH 送信元 IP が接続ごとに違った。恒久対策として
+  SSM 運用へ移行し 22番を閉鎖
+- *t3.micro のメモリ枯渇（OOM）* — 1GB + スワップ無しで WordPress 配置時にフリーズ。
+  2GB スワップ追加で解決（=/etc/fstab= に登録しないと再起動で消える）
+- *S3 オフロードは権限を実地で洗い出し* — プラグインが必要とする権限（=PutObjectAcl= 等）
+  を1つずつ突き止め、バケットの Object Ownership を調整
+- Ubuntu 特有の読み替え（=httpd→apache2=, =dnf→apt=, root は =auth_socket= で
+  =sudo mysql= 等）
+
+* Phase 2 — RDS 分離（三層アーキテクチャ）
+
+*目的*: EC2 同居の MySQL を RDS に分離し、二層から三層へ移行する実利を体験する。
+
+** やったこと
+
+- プライベートサブネットを2AZ分作成（RDS の DB サブネットグループは2AZ必須）
+- RDS 用 SG は *ソースを IP でなく EC2 の SG 参照* で 3306 を許可
+- 旧DBを残したまま =mysqldump → import → wp-config の DB_HOST 切替= の3手で移行
+- 検証後、課金停止のため RDS を削除し Phase 1 状態へロールバック
+
+** 検証方法
+
+WordPress サイトヘルスの「サーバーバージョン」がローカル(8.4.10)と RDS(8.4.9)で
+異なることを確認 → 別サーバーを見ている確証とした。接続エラーの切り分けも
+=timeout=経路不通 / =ERROR 1045=経路OK・認証失敗= として活用。
+
+** 学び
+
+- 「プライベート」の定義は名前でなくルートテーブル（=0.0.0.0/0→IGW= が無いこと）
+- SG 参照方式なら接続元 IP が揺れても効き続ける
+- wp-config を空の RDS に向けるだけではデータが消える。dump→import が必須
+- RDS は停止しても7日で自動起動する。長期不使用なら削除が確実
+
+* Phase 3 — GitHub + Terraform 導入
+
+*目的*: Phase 1〜2 で手動構築したものをコードで再現できるようにする。
+
+** 方針
+
+- GitHub を先に整備し、テーマ・設定ファイルをリポジトリ管理。=.gitignore= で
+  シークレット（=wp-config.php=, =*.pem=, パスワード類）を除外する習慣づけ
+- Terraform でネットワーク層から =plan → apply → destroy= を反復
+- 手動構築済みだからこそ「何を自動化しているか」が理解できる、という順序を重視
+
+* Phase 4 — Lambda によるサイト死活監視（Python）
+
+*目的*: サーバーレスの死活監視を体験する。「タイマーで叩いて、ダメなら知らせる」。
+
+** 構成
+
+#+begin_src text
+EventBridge (rate(5 minutes))
+      ↓ 5分ごとに起動
+Lambda: cloud-ops-lab-site-monitor  (Python / arm64 / urllib で GET)
+      ↓ 応答なし・200以外なら sns.publish
+SNS Topic: cloud-ops-lab-site-alert
+      ↓
+メール通知
+#+end_src
+
+** Lambda コード（標準ライブラリ + boto3 のみ）
+
+#+begin_src python
+import os, urllib.request, urllib.error, boto3
+
+SITE_URL  = os.environ["SITE_URL"]
+TOPIC_ARN = os.environ["TOPIC_ARN"]
+TIMEOUT   = int(os.environ.get("TIMEOUT", "10"))
+sns = boto3.client("sns")
+
+def lambda_handler(event, context):
+    try:
+        req = urllib.request.Request(SITE_URL, method="GET")
+        with urllib.request.urlopen(req, timeout=TIMEOUT) as res:
+            status = res.status
+        if status == 200:
+            return {"ok": True, "status": status}
+        reason = f"HTTP {status}"
+    except urllib.error.HTTPError as e:
+        reason = f"HTTP {e.code}"
+    except Exception as e:
+        reason = f"{type(e).__name__}: {e}"
+
+    sns.publish(TopicArn=TOPIC_ARN,
+                Subject="[Cloud Ops Lab] サイト応答なし",
+                Message=f"[ALERT] {SITE_URL}\n理由: {reason}")
+    return {"ok": False, "reason": reason}
+#+end_src
+
+** 学び
+
+- Lambda 標準の3秒タイムアウトでは =TIMEOUT=10= を待ち切れず誤検知 → 20秒に延長
+- =boto3= はランタイム同梱、=urllib= は標準 → パッケージング作業ゼロ
+- 実行ロールは初期はログ出力のみ。=sns:Publish= を明示的に追加する必要あり
+- SNS 購読は確認メールの「Confirm subscription」クリックまで届かない
+- EC2 停止 = 正常な異常検知 → 意図的に止める前に EventBridge ルールを無効化する運用が要る
+
+* Phase 5 — Docker / コンテナ
+
+*目的*: コンテナの概念（イメージ / コンテナ / ポート公開）を掴む。
+
+** やったこと
+
+- Colima(Lima VM, arm64 ネイティブ)を導入し、単体コンテナ(nginx)を起動
+- Docker Compose で WordPress + MySQL を1コマンド起動
+
+** 学び
+
+- =docker-compose up -d= 1コマンドで2コンテナ・ネットワーク・ボリュームが同時作成
+- =WORDPRESS_DB_HOST: db= と書くだけで繋がる（Compose が作るネットワーク内で
+  コンテナ名がそのまま DNS 名になる）
+- EC2 での手動設定が compose.yaml 1枚に集約される。宣言的で再現性が高い点は
+  Terraform と同じ発想
+- 名前付きボリュームでコンテナ削除後もデータが永続化する
+
+* Phase 6 — 死活監視の Terraform 化
+
+*目的*: Phase 4 で手動作成した Lambda + SNS 監視を Terraform で再構築する。
+
+** ポイント
+
+- Lambda ZIP を =archive_file= data source で自動生成し、=source_code_hash= で
+  コード変更時に自動デプロイ
+- EventBridge → Lambda の invoke には =aws_lambda_permission= が必要
+  （S3 や SNS トリガーとの違い）
+- SNS のメール購読は受信者側の確認操作が必要で Terraform だけでは完結しない
+
+* Phase 7 — Kubernetes 基礎
+
+*目的*: ローカル(Colima / k3s)で kubectl の基本操作とセルフヒーリングを習得する。
+
+** 学習内容
+
+- Pod / Deployment / Service / Namespace の操作
+- スケール（replicas 2→4）と、Pod 強制削除後の自動再作成（セルフヒーリング）
+- YAML による宣言的管理（=kubectl apply -f=）
+
+** 学び
+
+- Pod を直接使わず Deployment で管理するのが基本
+- セルフヒーリングが Kubernetes の最大価値：あるべき状態を自律的に維持する
+- Colima 環境では NodePort に Mac から直接アクセスできず =port-forward= を使う
+  （NodePort が Lima VM 内部に閉じているため）
+- Namespace は =-n= の指定忘れが実務で頻出のミス
+
+* Phase 8 — CI/CD（GitHub Actions + Terraform）
+
+*目的*: main ブランチへの push で Terraform の plan/apply を自動化する。
+
+** 実装
+
+- ワークフロー =.github/workflows/terraform.yml=。=paths= フィルタで対象ディレクトリ
+  変更時のみ起動。PR 時は plan のみ、main push 時のみ apply
+- Terraform state を S3 バケット =cloud-ops-lab-tfstate= に移行し CI/CD 間で共有
+
+** OIDC 認証の課題（未解決）
+
+キーレスの OIDC を試みたが、GitHub の新ランナーインフラがトークン発行元ドメインを
+=run-actions-3-azure-eastus.actions.githubusercontent.com= で発行するようになっており、
+AWS の OIDC Provider の検証に失敗した。OIDC Provider と IAM Role は作成済みのため、
+現時点は IAM キー方式（GitHub Secrets）で代替している。
+
+* Phase 9 — 可観測性: Metrics（Prometheus + Grafana）
+
+*目的*: 監視対象サーバーのメトリクスを収集・可視化する基盤を作る。
+
+** 構成
+
+- 専用 monitoring EC2(=i-0936d3a5a6d7fb60e=, t3.small)に Prometheus / Grafana /
+  Node Exporter を構築
+- WordPress EC2 にも Node Exporter を導入し、Prometheus が両サーバーを scrape
+- Grafana に Node Exporter Full ダッシュボード(ID 1860)をインポート
+
+** 学び
+
+- *CloudWatch Agent より Prometheus を選ぶ理由*: Prometheus はマルチクラウド・
+  オンプレでも同構成で動く業界標準。SRE のクラウド横断スキルを示せる
+- *t3.micro は監視スタックに不足*: Grafana 単体で約600MB。t3.small(2GB)以上が必要
+- =systemctl status= はページャーで SSM セッションが固まる → =--no-pager= 必須
+- data source のタグ検索は実リソースのタグを =aws ec2 describe-*= で必ず確認する
+  （手動作成リソースはコード定義とタグが食い違うことがある）
+
+** 既知の課題
+
+- WordPress EC2 の Node Exporter と SG 9100番ルールが Terraform 管理外（手動）
+- WordPress EC2 の Root FS 使用率が高い（83.5%）
+- Prometheus のメトリクスが EC2 再起動で消える（永続化未対応）
+
+* Phase 10 — 可観測性: Logs（CloudWatch Logs）
+
+*目的*: Apache のログをクラウドネイティブに収集・監視・分析する。
+
+** 実装
+
+- CloudWatch Agent を導入（Ubuntu 標準リポジトリに無く、AWS 公式 deb を直接取得）
+- Apache の access.log / error.log を Log Group に収集（保持30日）
+- error.log にメトリクスフィルタを設定 → 5分で1件以上のエラーでアラーム → SNS 通知
+- Logs Insights で User-Agent 別アクセスを分析
+
+** 分析で分かったこと
+
+直近1時間989件のうち約82%がブラウザ偽装ボットと推定。CensysInspect / zgrab など
+外部スキャナーも観測。WAF や SG での遮断を今後の課題とした。
+
+** 学び
+
+- 手動作成リソースを Terraform 管理下に置くには =terraform import= で state に
+  取り込んでから apply する（衝突回避）
+- macOS の =date= は =-d= が使えず =-v-1H= 形式
+
+* Phase 11 — 可観測性: Traces（AWS X-Ray）
+
+*目的*: Lambda(site-monitor)に分散トレーシングを入れ、可観測性の三本柱を揃える。
+
+** 実装
+
+- Terraform で Lambda の =tracing_config= を =Active= に変更し、実行ロールに
+  =xray:PutTraceSegments= 等を付与
+- =aws-xray-sdk= を組み込み、=patch_all()= で boto3・urllib を自動トレース
+- パッケージングを1ファイル zip からディレクトリ zip に変更し SDK を同梱
+
+** 学び
+
+- X-Ray の三概念: Trace（1リクエスト全体）/ Segment（サービス単位）/ Subsegment（処理単位）
+- *Mac 向けバイナリ問題*: =pip install -t .= をそのまま実行すると =wrapt= が
+  Mac 向けでインストールされ Lambda(Linux)で動かない。
+  =--platform manylinux2014_x86_64 --only-binary=:all:= で Linux 向けを明示する
+- X-Ray の本領は多段構成（API GW → Lambda → DynamoDB 等）。単一 Lambda では恩恵は小さい
+
+* 横断的なテーマ
+
+** 可観測性の三本柱
+
+| 柱             | 実装                    | Phase |
+|----------------+-------------------------+-------|
+| メトリクス      | Prometheus + Grafana    |     9 |
+| メトリクス(AWS) | CloudWatch Alarm        | 6, 10 |
+| ログ           | CloudWatch Logs + Agent |    10 |
+| トレーシング    | AWS X-Ray               |    11 |
+
+死活監視（落ちたら通知）に加え、「落ちる前にディスクが逼迫していた」「CPU スパイクが
+先行していた」といった事後分析(Post-mortem)が可能な基盤を構築した。
+
+** セキュリティ運用の方針
+
+- インバウンドは必要最小限（HTTP 80 のみ公開、SSH 22 は閉鎖）
+- サーバー操作は SSM 経由、権限付与は IAM ロール（アクセスキーを置かない）
+- SG のソースは IP でなく SG 参照を基本とする
+
+** コスト管理
+
+- EC2 / Elastic IP / RDS は稼働中に課金。学習後は停止・削除を徹底
+- Lambda / EventBridge / SNS / CloudWatch は通常運用ではほぼ無料枠内
+- 監視スタックは t3.small が最小構成
+
+* 残課題
+
+- WordPress EC2 の Node Exporter インストールと SG 9100番ルールの Terraform 化
+- CloudWatch Agent のインストール・設定の自動化（user_data / SSM ドキュメント）
+- Prometheus メトリクスの永続化（EBS マウント）
+- WordPress EC2 の Root FS 逼迫への対応（不要ファイル削除 / EBS 拡張）
+- ボット・スキャナーに対する WAF または SG での遮断
+- OIDC 認証への切り替え（GitHub 側インフラ移行の完了後）
+
+* まとめ
+
+WordPress という単純な題材を、手動構築からコード化・自動化・コンテナ化・可観測性まで
+一貫して積み上げることで、EC2 / RDS / S3 / Lambda / Terraform / Docker / Kubernetes /
+CI/CD / 可観測性が相互に繋がった構成を作った。各フェーズで実機ゆえの「教科書通りに
+進まない」場面（IP の揺れ、OOM、権限の洗い出し、OIDC 失敗、Mac バイナリ混入など）に
+対処した記録が、SRE として最も価値のある学習内容になっている。
