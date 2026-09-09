@@ -63,6 +63,14 @@ resource "aws_iam_role_policy" "lambda_policy" {
         Effect   = "Allow"
         Action   = "sns:Publish"
         Resource = aws_sns_topic.site_alert.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "xray:PutTraceSegments",
+          "xray:PutTelemetryRecords"
+        ]
+        Resource = "*"
       }
     ]
   })
@@ -71,8 +79,9 @@ resource "aws_iam_role_policy" "lambda_policy" {
 # ── Lambda Function ───────────────────────────────────
 data "archive_file" "lambda_zip" {
   type        = "zip"
-  source_file = "${path.module}/lambda/site_monitor.py"
+  source_dir  = "${path.module}/lambda"
   output_path = "${path.module}/lambda/site_monitor.zip"
+  excludes    = ["site_monitor.zip", "__pycache__"]
 }
 
 resource "aws_lambda_function" "site_monitor" {
@@ -90,6 +99,10 @@ resource "aws_lambda_function" "site_monitor" {
       SNS_TOPIC_ARN = aws_sns_topic.site_alert.arn
       TIMEOUT_SECONDS = "10"
     }
+  }
+
+ tracing_config {
+    mode = "Active"
   }
 }
 

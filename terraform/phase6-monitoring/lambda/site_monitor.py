@@ -3,6 +3,12 @@ import os
 import urllib.request
 import urllib.error
 
+from aws_xray_sdk.core import xray_recorder
+from aws_xray_sdk.core import patch_all
+
+# boto3・urllib を自動でトレース対象にする
+patch_all()
+
 def lambda_handler(event, context):
     url = os.environ["TARGET_URL"]
     sns_topic_arn = os.environ["SNS_TOPIC_ARN"]
