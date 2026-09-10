@@ -1,37 +1,31 @@
-:PROPERTIES:
-:GPTEL_MODEL: claude-sonnet-4-5-20250929
-:GPTEL_BACKEND: Claude
-:GPTEL_SYSTEM: You are a large language model living in Emacs and a helpful assistant. Respond concisely.
-:GPTEL_TOOLS:
-:END:
 #+TITLE: プログラム制作演習
 #+AUTHOR: T.Shibata
 #+DESCRIPTION: AWSクラウドインフラ構築学習プロジェクトの演習記録
 #+KEYWORDS: AWS, Terraform, Docker, Kubernetes, クラウドインフラ
 #+REVEAL_ROOT: https://cdn.jsdelivr.net/npm/reveal.js
-#+REVEAL_THEME: moon
+#+REVEAL_THEME: league
 #+REVEAL_TRANSITION: slide
 #+REVEAL_HLEVEL: 1
 #+REVEAL_PLUGINS: (highlight notes)
 #+REVEAL_SLIDE_NUMBER: c/t
 #+REVEAL_INIT_OPTIONS: width:1280, height:720
+#+OPTIONS: toc:1
 
-* プログラムについて
-+ プログラムの名称：cloud-ops-lab
-+ ファイル名：cloud-ops-lab
-+ 必要なパッケージ：
-+ 動作内容：AWSを使用して、クラウドインフラの構築・管理を行なう。
+* プロジェクトについて
++ 名称：cloud-ops-lab
++ 内容：AWSを使用して、クラウドインフラの構築・管理を行なう
++ 構成技術：AWS(EC2, RDS, S3, Lambda) / Terraform / Docker / Kubernetes / CI/CD
 
 * 作成した意図
-+ AWSやクラウドの概念を理解し、クラウドインフラを扱えるような能力を目指す
-+ Phase 1（EC2+S3+WordPress）が順調に上手く進み1週間で終わった場合、
-  Phase 2（RDS移行）を2週目にやる予定。
-+ Amazon Lightsailは拡張性がないためEC2を選択する
-+ サインアップ$100＋αの無料クレジット枠の範囲でできることを行い、AWSの理解を深める
+1. AWSやクラウドの概念を理解し、クラウドインフラを扱えるような能力を目指す
+2. AWSサインアップ$100＋αの無料クレジット枠の範囲でできる限り理解を深める
+3. SREエンジニアに必要な知識を得る
 
 ** 学習したいこと
+#+ATTR_REVEAL: :frag (fade-in fade-in fade-in fade-in)
 + AWS
   - EC2(Elastic Compute Cloud)
+    * Amazon Lightsailは拡張性・自由度が限られるためEC2を選択する
   - S3(Amazon Simple Storage Service)
   - RDS(Relational Database Service)
   - Lambda(Pythonプログラム)
@@ -40,13 +34,14 @@
 + Kubernetes
 
 ** 学習手順
+#+ATTR_REVEAL: :frag (fade-in)
 1) 手動構築で基礎固め（AWS Console）
 2) データ層の強化（RDS）
 3) コード化・自動化（GitHub + Terraform）
 4) サーバーレス自動化（Lambda）
 5) コンテナ化（Docker → Kubernetes）
 
-** フェーズ別の目安（1日1〜2時間）
+** 当初計画目安（1日1〜2時間）
 |---+-----------------------------+----------|
 | 1 | EC2 + S3 + WordPress手動構築 | 2〜4週間 |
 | 2 | RDS導入・DB移行              | 1〜2週間 |
@@ -57,6 +52,90 @@
 |---+-----------------------------+----------|
 
 * 工夫した点
++ Chrome + Claudeで学習効率化
++ 学習優先順位
++ 設計・実装
++ GitHub( https://github.com/t-shibata-dev/cloud-ops-lab )に作業をまとめる
+
+** Chrome + Claudeで学習効率化
++ Chrome + Claude（Anthropic公式の拡張機能「Claude in Chrome」）で効率よく学習
+  - 基本は対話形式で進行
+  - 必要に応じて作業予定を変更
+  - 解決できない場合は、自動操作補助
+
+** 学習優先順位
++ 初期計画内容が重すぎた
+  - 9月11日(金)の期日までに間に合わない見込みだった
+    * Phase 1（EC2+S3+WordPress）が順調に上手く進み1週間で終わった場合、Phase 2（RDS移行）を2週目にやる予定
+  - 機能を理解するより、まず実際に動かして動作確認することを重視
+  - 結果、9月9日(水)までに全11フェーズを完了できた
+#+REVEAL: split
++ 学習対象
+  - AWS: EC2 / S3 / RDS / Lambda / SNS / EventBridge / CloudWatch / X-Ray / IAM / SSM
+  - IaC: Terraform（state は S3 バックエンド）
+  - コンテナ: Docker / Docker Compose / Kubernetes
+  - CI/CD: GitHub Actions
+  - 可観測性: Prometheus / Grafana / CloudWatch Logs / AWS X-Ray
+#+REVEAL: split
++ 学習テーマ
+| 1 | EC2 + S3 で WordPress 手動構築 | [2026-08-28 Fri]--[2026-09-01 Tue] |
+| 2 | RDS 分離（三層アーキテクチャ）   | [2026-09-01 Tue]--[2026-09-02 Wed] |
+| 3 | GitHub + Terraform 導入       | [2026-09-02 Wed]                   |
+| 4 | Lambda 死活監視（Python）      | [2026-09-03 Thu]--[2026-09-04 Fri] |
+#+REVEAL: split
+|  5 | Docker / コンテナ        | [2026-09-07 Mon] |
+|  6 | 死活監視の Terraform 化  | [2026-09-07 Mon] |
+|  7 | Kubernetes 基礎         | [2026-09-07 Mon] |
+|  8 | CI/CD（GitHub Actions） | [2026-09-08 Tue] |
+|  9 | 可観測性: Metrics        | [2026-09-08 Tue] |
+| 10 | 可観測性: Logs           | [2026-09-08 Tue] |
+| 11 | 可観測性: Traces         | [2026-09-09 Wed] |
+
+** 設計・実装
++ SSH(22)を開けずSSM Session Managerで運用（攻撃面の削減・IP揺れ対策）
++ アクセスキーを置かずIAM ロールで権限委譲（最小権限）
++ SGのソースをIPでなくSG参照にする
++ 手動構築 → Terraformコード化の順序（何を自動化しているか理解できる）
+
 * 苦労した点
++ スケジュール変更
++ AWSコンソール画面は慣れが必要
++ AWS無料クレジット枠範囲で実装
++ macOSの環境依存(Rosetta, Apple Silicon)
++ Claude週間使用制限
+
+** スケジュール変更
++ 開始前にPhaseごとにスケジュールを立てるも計画どおりには進まない
+  - 新しい作業が多々発生
+
+** AWSコンソール画面
++ 基本操作がわからない
++ 多機能すぎてわからない
++ 用語がわからない
++ 発生する費用がわからない
+
+** AWS無料クレジット枠範囲で実装
++ 低コストにしたせいでトラブルが発生
+  - t3.micro(1GB)でOOM発生 → t3.small(2GB)で解消
+
+** macOSの環境依存
++ M1を使用しているがTerminalがRosetta有効になっていた
+  - アプリをIntel用からApple Silicon用に変更
+
+** Claude週間使用制限
++ Claudeのクレジット限界で週間規制あり
++ 「Opus 4.8 高」はクレジットの消費が激しい？ので「Opus 4.8 低」に途中から変更
++ プロモーションクレジット$100あったので助かった
+  - 「Opus 4.8 高」2〜3時間で$50も消費された
+
 * その他（実現できなかったこと、etc.）
++ DockerとKubernetesの理解（少しさわった程度）
++ WordPress EC2 の Node Exporter インストールと SG 9100番ルールのTerraform化
++ CloudWatch Agentのインストール・設定の自動化（user_data / SSMドキュメント）
+#+REVEAL: split
++ Prometheus メトリクスの永続化（EBSマウント）
++ WordPress EC2のRoot FS 逼迫への対応（不要ファイル削除 / EBS拡張）
++ ボット・スキャナーに対するWAFまたはSGでの遮断
++ SSL化(http → https)
+
 
