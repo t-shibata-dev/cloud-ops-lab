@@ -22,7 +22,7 @@
 3. SREエンジニアに必要な知識を得る
 
 ** 学習したいこと
-#+ATTR_REVEAL: :frag (fade-in fade-in fade-in fade-in)
+#+ATTR_REVEAL: :frag (fade-in fade-in fade-in fade-i
 + AWS
   - EC2(Elastic Compute Cloud)
     * Amazon Lightsailは拡張性・自由度が限られるためEC2を選択する
